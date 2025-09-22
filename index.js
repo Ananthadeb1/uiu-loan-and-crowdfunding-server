@@ -12,9 +12,10 @@ app.use(cors());
 app.use(express.json());
 
 // Start server only after DB connection
-connectDB().then((client) => {
-  // keep the collections here
-  const userCollection = client.db("peerFund").collection("users");
+connectDB().then((db) => {
+  // ✅ collections here
+  const userCollection = db.collection("users");
+  const fundraiseCollection = db.collection("fundraise");
 
   //jwt releted work
   app.post("/jwt", async (req, res) => {
@@ -54,16 +55,6 @@ connectDB().then((client) => {
     }
     next();
   };
-
-  // app.get("/users", verifyToken, async (req, res) => {
-  //   try {
-  //     const users = await userCollection.find().toArray();
-  //     res.json(users);
-  //     console.log("✅ /users route called");
-  //   } catch (error) {
-  //     res.status(500).json({ error: "Failed to fetch users" });
-  //   }
-  // });
 
   //get user by email
   app.get("/users/:email", verifyToken, async (req, res) => {
@@ -121,12 +112,11 @@ connectDB().then((client) => {
 
   //get all users
   app.get("/users", verifyToken, async (req, res) => {
-    // console.log(req.headers);
     const result = await userCollection.find().toArray();
     res.send(result);
   });
 
-  //make normal user to admin
+  //make normal user to admin (duplicate but kept as-is)
   app.patch("/users/admin/:id", async (req, res) => {
     const id = req.params.id;
     const filter = { _id: new ObjectId(id) };
@@ -157,6 +147,40 @@ connectDB().then((client) => {
       res
         .status(500)
         .send({ success: false, message: "Failed to delete user" });
+    }
+  });
+
+  //fundraise form api 
+  app.post("/fundraise", async (req, res) => {
+    try {
+      const fund = req.body;   // get form data from client
+      console.log(fund);
+
+      // check if the same email already applied
+      const query = { email: fund.email };
+      const existingFund = await fundraiseCollection.findOne(query);
+
+      if (existingFund) {
+        return res.send({ message: "Application already exists", insertedId: null });
+      }
+
+      // insert the fundraise application
+      const result = await fundraiseCollection.insertOne(fund);
+      res.send(result);
+    } catch (error) {
+      console.error("Error inserting fundraise application:", error);
+      res.status(500).send({ message: "Something went wrong" });
+    }
+  });
+
+  // ✅ new GET route for fundraise applicants
+  app.get("/fundraise", async (req, res) => {
+    try {
+      const funds = await fundraiseCollection.find().toArray();
+      res.send(funds);
+    } catch (error) {
+      console.error("Error fetching fundraise applicants:", error);
+      res.status(500).send({ message: "Something went wrong" });
     }
   });
 
