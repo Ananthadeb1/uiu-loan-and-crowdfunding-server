@@ -5,16 +5,19 @@ const { ObjectId } = require("mongodb");
 require("dotenv").config();
 const connectDB = require("./DBconnection.js");
 
+// ADDED: import the loans route
+const loanRoutes = require("./routes/loanRoutes");
+
 const app = express();
 const port = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
 
-// Start server only after DB connection
 connectDB().then((client) => {
-  // keep the collections here
+  app.locals.mongoClient = client;
   const userCollection = client.db("peerFund").collection("users");
+
 
   //jwt releted work
   app.post("/jwt", async (req, res) => {
@@ -159,6 +162,9 @@ connectDB().then((client) => {
         .send({ success: false, message: "Failed to delete user" });
     }
   });
+
+  // ADDED: mount the loans API (POST /api/loans, etc.)
+  app.use("/api/loans", loanRoutes);
 
   //basic route
   app.get("/", (req, res) => {
