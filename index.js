@@ -14,10 +14,10 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Start server only after DB connection
 connectDB().then((client) => {
-  app.locals.mongoClient = client;
+  // keep the collections here
   const userCollection = client.db("peerFund").collection("users");
-
 
   //jwt releted work
   app.post("/jwt", async (req, res) => {
@@ -57,16 +57,6 @@ connectDB().then((client) => {
     }
     next();
   };
-
-  // app.get("/users", verifyToken, async (req, res) => {
-  //   try {
-  //     const users = await userCollection.find().toArray();
-  //     res.json(users);
-  //     console.log("✅ /users route called");
-  //   } catch (error) {
-  //     res.status(500).json({ error: "Failed to fetch users" });
-  //   }
-  // });
 
   //get user by email
   app.get("/users/:email", verifyToken, async (req, res) => {
@@ -124,12 +114,11 @@ connectDB().then((client) => {
 
   //get all users
   app.get("/users", verifyToken, async (req, res) => {
-    // console.log(req.headers);
     const result = await userCollection.find().toArray();
     res.send(result);
   });
 
-  //make normal user to admin
+  //make normal user to admin (duplicate but kept as-is)
   app.patch("/users/admin/:id", async (req, res) => {
     const id = req.params.id;
     const filter = { _id: new ObjectId(id) };
@@ -162,9 +151,6 @@ connectDB().then((client) => {
         .send({ success: false, message: "Failed to delete user" });
     }
   });
-
-  // ADDED: mount the loans API (POST /api/loans, etc.)
-  app.use("/api/loans", loanRoutes);
 
   //basic route
   app.get("/", (req, res) => {

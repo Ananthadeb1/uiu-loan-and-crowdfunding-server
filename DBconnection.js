@@ -14,10 +14,10 @@ async function connectDB() {
   try {
     await client.connect();
     await client.db("admin").command({ ping: 1 });
-    console.log(
-      "✅ Pinged your deployment. Successfully connected to MongoDB!"
-    );
-    return client; // return the connected client
+    console.log("✅ Connected to MongoDB successfully!");
+
+    // instead of returning client, return db instance
+    return client.db("peerFund");  
   } catch (error) {
     console.error("❌ Failed to connect to MongoDB:", error);
     process.exit(1);
