@@ -16,6 +16,10 @@ connectDB().then((client) => {
   // keep the collections here
   const userCollection = client.db("peerFund").collection("users");
 
+  // Collection for storing extra user info
+  const userExtraInfoCollection = client.db("peerFund").collection("userExtraInfo");
+
+
   //jwt releted work
   app.post("/jwt", async (req, res) => {
     const user = req.body;
@@ -119,6 +123,8 @@ connectDB().then((client) => {
     res.send(result);
   });
 
+
+
   //get all users
   app.get("/users", verifyToken, async (req, res) => {
     // console.log(req.headers);
@@ -159,6 +165,48 @@ connectDB().then((client) => {
         .send({ success: false, message: "Failed to delete user" });
     }
   });
+
+
+
+  // ==========================
+  // User Extra Info APIs
+  // ==========================
+
+  // Get extra info by userId
+  app.get("/userExtraInfo/:id", verifyToken, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const info = await userExtraInfoCollection.findOne({ userId: id });
+      res.send(info || {}); // send {} if no info found
+    } catch (error) {
+      console.error("Error fetching user extra info:", error);
+      res.status(500).send({ error: "Failed to fetch user extra info" });
+    }
+  });
+
+  // Add or update extra info
+  app.post("/userExtraInfo/:id", verifyToken, async (req, res) => {
+    try {
+      const id = req.params.id;
+      const data = req.body;
+
+      const filter = { userId: id };
+      const updateDoc = { $set: data };
+
+      const result = await userExtraInfoCollection.updateOne(
+        filter,
+        updateDoc,
+        { upsert: true } // create new if doesn't exist
+      );
+
+      res.send({ success: true, result });
+    } catch (error) {
+      console.error("Error saving user extra info:", error);
+      res.status(500).send({ error: "Failed to save user extra info" });
+    }
+  });
+
+
 
   //basic route
   app.get("/", (req, res) => {
