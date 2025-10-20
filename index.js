@@ -11,18 +11,20 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// ADDED: import the loans route
+// Import routes
 const loanRoutes = require("./routes/loanRoutes");
-
-const offerRoutes = require("./routes/offerRoutes"); 
+const offerRoutes = require("./routes/offerRoutes");
+const comparisonRoutes = require("./routes/loanComparison"); // ADDED
 
 // Start server only after DB connection
 connectDB().then((db) => {
   app.locals.db = db;
 
-  // Mount loan routes
+  // Mount routes
   app.use("/api/loans", loanRoutes);
   app.use("/api/offers", offerRoutes);
+  app.use("/api/comparison", comparisonRoutes); // ADDED
+  
   // ✅ collections here
   const userCollection = db.collection("users");
   const fundraiseCollection = db.collection("fundraise");
