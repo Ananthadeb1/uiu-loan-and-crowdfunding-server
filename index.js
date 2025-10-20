@@ -14,8 +14,15 @@ app.use(express.json());
 // ADDED: import the loans route
 const loanRoutes = require("./routes/loanRoutes");
 
+const offerRoutes = require("./routes/offerRoutes"); 
+
 // Start server only after DB connection
 connectDB().then((db) => {
+  app.locals.db = db;
+
+  // Mount loan routes
+  app.use("/api/loans", loanRoutes);
+  app.use("/api/offers", offerRoutes);
   // ✅ collections here
   const userCollection = db.collection("users");
   const fundraiseCollection = db.collection("fundraise");
