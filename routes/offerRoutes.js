@@ -23,9 +23,9 @@ router.post("/", async (req, res) => {
 
     // Validation
     if (!loanId || !borrowerId || !donorId || !offeredAmount || !interestRate) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: "Missing required fields" 
+        message: "Missing required fields"
       });
     }
 
@@ -60,7 +60,7 @@ router.post("/", async (req, res) => {
     };
 
     const result = await offersCollection.insertOne(offerDoc);
-    
+
     return res.status(201).json({
       success: true,
       message: "Offer submitted successfully",
@@ -69,9 +69,9 @@ router.post("/", async (req, res) => {
 
   } catch (error) {
     console.error("offerRoutes error:", error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       success: false,
-      message: "Server error creating offer" 
+      message: "Server error creating offer"
     });
   }
 });
@@ -80,12 +80,12 @@ router.post("/", async (req, res) => {
 router.get("/loan/:loanId", async (req, res) => {
   try {
     const { loanId } = req.params;
-    
+
     const db = req.app.locals.db;
     const offersCollection = db.collection("offers");
-    
-    const offers = await offersCollection.find({ 
-      loanId: new ObjectId(loanId) 
+
+    const offers = await offersCollection.find({
+      loanId: new ObjectId(loanId)
     }).sort({ createdAt: -1 }).toArray();
 
     return res.json({
@@ -95,9 +95,9 @@ router.get("/loan/:loanId", async (req, res) => {
 
   } catch (error) {
     console.error("Error fetching offers:", error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       success: false,
-      message: "Server error fetching offers" 
+      message: "Server error fetching offers"
     });
   }
 });
@@ -106,12 +106,12 @@ router.get("/loan/:loanId", async (req, res) => {
 router.get("/donor/:donorId", async (req, res) => {
   try {
     const { donorId } = req.params;
-    
+
     const db = req.app.locals.db;
     const offersCollection = db.collection("offers");
-    
-    const offers = await offersCollection.find({ 
-      donorId: donorId 
+
+    const offers = await offersCollection.find({
+      donorId: donorId
     }).sort({ createdAt: -1 }).toArray();
 
     return res.json({
@@ -121,11 +121,39 @@ router.get("/donor/:donorId", async (req, res) => {
 
   } catch (error) {
     console.error("Error fetching donor offers:", error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       success: false,
-      message: "Server error fetching offers" 
+      message: "Server error fetching offers"
     });
   }
 });
+
+
+// GET /api/offers/donor/:donorId - Get all offers by a specific donor
+router.get("/donor/:donorId", async (req, res) => {
+  try {
+    const { donorId } = req.params;
+
+    const db = req.app.locals.db;
+    const offersCollection = db.collection("offers");
+
+    const offers = await offersCollection.find({
+      donorId: donorId
+    }).sort({ createdAt: -1 }).toArray();
+
+    return res.json({
+      success: true,
+      data: offers
+    });
+
+  } catch (error) {
+    console.error("Error fetching donor offers:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error fetching offers"
+    });
+  }
+});
+
 
 module.exports = router;
