@@ -2,75 +2,64 @@ const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
 
-// Get all loan offers for comparison
-router.get('/offers', async (req, res) => {
+// Get loan offers for the current user's loan requests - FIXED VERSION
+router.get('/my-offers', async (req, res) => {
   try {
-    const db = req.app.locals.db; // Use the existing DB connection
-    const offers = await db.collection('offers')
-      .find({ status: 'active' })
-      .sort({ interestRate: 1 })
-      .toArray();
+    const db = req.app.locals.db;
+    const userId = req.query.userId;
     
-    res.json({
-      success: true,
-      data: offers
-    });
-  } catch (error) {
-    console.error('Error fetching offers:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch loan offers'
-    });
-  }
-});
+    console.log("🔍 [DEBUG] User ID received:", userId);
 
-// Get loan offers by type
-router.get('/offers/:loanType', async (req, res) => {
-  try {
-    const { loanType } = req.params;
-    const db = req.app.locals.db; // Use the existing DB connection
-    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    // 1. Get ALL loan requests from loanrequests collection (not just active ones)
+    const userLoans = await db.collection('loanrequests')
+      .find({ userId: userId })
+      .toArray();
+
+    console.log("🔍 [DEBUG] Found user loans:", userLoans.length);
+
+    if (userLoans.length === 0) {
+      console.log("🔍 [DEBUG] No loan requests found for user");
+      return res.json({
+        success: true,
+        data: [],
+        message: 'No loan requests found for this user'
+      });
+    }
+
+    // 2. Convert loan IDs to ObjectId for querying offers
+    const loanIds = userLoans.map(loan => new ObjectId(loan._id));
+    console.log("🔍 [DEBUG] Loan IDs to search for:", loanIds);
+
+    // 3. Get ALL offers from offers collection (all statuses)
     const offers = await db.collection('offers')
       .find({ 
-        loanType: loanType.toLowerCase(),
-        status: 'active'
+        loanId: { $in: loanIds }
+        // REMOVED status filter to get ALL offers including accepted/rejected
       })
-      .sort({ interestRate: 1 })
+      .sort({ createdAt: -1 })
       .toArray();
-    
-    res.json({
-      success: true,
-      data: offers
-    });
-  } catch (error) {
-    console.error('Error fetching offers by type:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch loan offers'
-    });
-  }
-});
 
-// Compare specific offers
-router.post('/compare', async (req, res) => {
-  try {
-    const { offerIds } = req.body;
-    const db = req.app.locals.db; // Use the existing DB connection
-    
-    const objectIds = offerIds.map(id => new ObjectId(id));
-    const offers = await db.collection('offers')
-      .find({ _id: { $in: objectIds } })
-      .toArray();
-    
+    console.log("🔍 [DEBUG] Found ALL offers for user:", offers.length);
+
     res.json({
       success: true,
-      data: offers
+      data: offers,
+      userLoansCount: userLoans.length,
+      offersCount: offers.length
     });
   } catch (error) {
-    console.error('Error comparing offers:', error);
+    console.error('❌ Error fetching user offers:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to compare offers'
+      message: 'Failed to fetch your loan offers',
+      error: error.message
     });
   }
 });
