@@ -14,44 +14,23 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Serve uploaded files statically
-app.use("/uploads", express.static("uploads"));
-
-// Configure multer for file storage
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = "uploads/profile-images/";
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, "profile-" + uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: function (req, file, cb) {
-    if (file.mimetype.startsWith("image/")) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed!"), false);
-    }
-  },
-});
-
-// ADDED: import the loans route
+// Import routes
 const loanRoutes = require("./routes/loanRoutes");
+const offerRoutes = require("./routes/offerRoutes");
+const comparisonRoutes = require("./routes/loanComparison"); // ADDED
 
 // Start server only after DB connection
-connectDB().then((client) => {
-  // keep the collections here
-  const userCollection = client.db("peerFund").collection("users");
+connectDB().then((db) => {
+  app.locals.db = db;
+
+  // Mount routes
+  app.use("/api/loans", loanRoutes);
+  app.use("/api/offers", offerRoutes);
+  app.use("/api/comparison", comparisonRoutes); // ADDED
+  
+  // ✅ collections here
+  const userCollection = db.collection("users");
+  const fundraiseCollection = db.collection("fundraise");
 
   // Collection for storing extra user info
   const userExtraInfoCollection = client
@@ -322,55 +301,7 @@ connectDB().then((client) => {
       }
     });
 
-    // Delete profile image
-    app.delete("/user-image/:email", verifyToken, async (req, res) => {
-      try {
-        const email = req.params.email;
-        if (email !== req.decoded.email) {
-          return res.status(403).send({ message: "unauthorized access" });
-        }
-
-        const filter = { email: email };
-        const updateDoc = { $set: { image: "" } };
-
-        const result = await userCollection.updateOne(filter, updateDoc);
-
-        res.send({
-          success: true,
-          result,
-          message: "Profile image removed successfully",
-        });
-      } catch (error) {
-        console.error("Error removing profile image:", error);
-        res.status(500).send({ error: "Failed to remove profile image" });
-      }
-    });
-
-    //basic route
-    app.get("/", (req, res) => {
-      res.send("Hello from Peer fund Server!");
-    });
-
-    // Error handling middleware for multer
-    app.use((error, req, res, next) => {
-      if (error instanceof multer.MulterError) {
-        if (error.code === "LIMIT_FILE_SIZE") {
-          return res
-            .status(400)
-            .send({ error: "File size too large. Maximum 5MB allowed." });
-        }
-      }
-      res.status(500).send({ error: error.message });
-    });
-
-    app.listen(port, () => {
-      console.log(`🚀 Server is running on port: ${port}`);
-      console.log(
-        `📁 Upload directory: ${path.join(
-          process.cwd(),
-          "uploads/profile-images"
-        )}`
-      );
-    });
-  }); // ✅ closes inner connectDB
-}); // ✅ closes outer connectDB
+  app.listen(port, () => {
+    console.log(`🚀 Server is running on port: ${port}`);
+  });
+});
