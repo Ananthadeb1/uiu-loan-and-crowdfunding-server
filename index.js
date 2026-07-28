@@ -257,9 +257,16 @@ connectDB().then((db) => {
   app.patch("/loanRequest/:id", verifyToken, async (req, res) => {
     try {
       const id = req.params.id;
-      const { status } = req.body;
+      let { status } = req.body;
+      const validStatuses = ["pending", "approved", "rejected", "funded", "completed", "cancelled"];
+      status = status ? String(status).toLowerCase() : "approved";
+
+      if (!validStatuses.includes(status)) {
+        return res.status(400).send({ message: "Invalid status value" });
+      }
+
       const filter = { _id: new ObjectId(id) };
-      const updateDoc = { $set: { status: status || "Approved" } };
+      const updateDoc = { $set: { status } };
       const result = await loanRequestsCollection.updateOne(filter, updateDoc);
       res.send(result);
     } catch (error) {
@@ -306,9 +313,16 @@ connectDB().then((db) => {
   app.patch("/fundraise/:id", verifyToken, async (req, res) => {
     try {
       const id = req.params.id;
-      const { status } = req.body;
+      let { status } = req.body;
+      const validStatuses = ["pending", "approved", "rejected"];
+      status = status ? String(status).toLowerCase() : "approved";
+
+      if (!validStatuses.includes(status)) {
+        return res.status(400).send({ message: "Invalid status value" });
+      }
+
       const filter = { _id: new ObjectId(id) };
-      const updateDoc = { $set: { status: status || "Approved" } };
+      const updateDoc = { $set: { status } };
       const result = await fundraiseCollection.updateOne(filter, updateDoc);
       res.send(result);
     } catch (error) {

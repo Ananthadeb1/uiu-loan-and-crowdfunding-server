@@ -97,16 +97,23 @@ router.post("/", async (req, res) => {
   }
 });
 
-// GET /api/loans - Get all loan requests (for loan bidding page)
+// GET /api/loans - Get loan requests for bidding
 router.get("/", async (req, res) => {
   try {
     const db = req.app.locals.db;
     const loanCollection = db.collection("loanrequests");
-    
-    // Get only pending loan requests
-    const loans = await loanCollection.find({ 
-      status: "pending" 
-    }).sort({ createdAt: -1 }).toArray();
+    const status = String(req.query.status || "approved").toLowerCase();
+    const validStatuses = ["pending", "approved", "rejected", "funded", "completed", "cancelled"];
+
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status filter",
+      });
+    }
+
+    const statusQuery = { status: { $regex: new RegExp(`^${status}$`, "i") } };
+    const loans = await loanCollection.find(statusQuery).sort({ createdAt: -1 }).toArray();
 
     return res.json({
       success: true,
